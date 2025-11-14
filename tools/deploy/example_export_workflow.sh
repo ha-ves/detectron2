@@ -9,15 +9,26 @@ echo "This script demonstrates how to export a LazyConfig model to LibTorch"
 echo ""
 
 # Configuration
-CONFIG_FILE="configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py"
+# You can use either the base config or the saved config.yaml from training
+CONFIG_FILE="${1:-configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py}"
 OUTPUT_DIR="./libtorch_export"
-SAMPLE_IMAGE="${1:-demo/sample.jpg}"
-MODEL_WEIGHTS="${2:-}"  # Optional: path to model weights
+SAMPLE_IMAGE="${2:-demo/sample.jpg}"
+MODEL_WEIGHTS="${3:-}"  # Optional: path to model weights
 
 # Step 1: Export model to TorchScript
 echo "Step 1: Exporting model to TorchScript..."
 echo "Config: $CONFIG_FILE"
 echo "Output: $OUTPUT_DIR"
+echo ""
+
+# Check if using saved config.yaml from training
+if [[ "$CONFIG_FILE" == *"config.yaml"* ]]; then
+    echo "Using saved config.yaml from training (recommended for trained models)"
+else
+    echo "Using base config file"
+    echo "Note: For trained models, consider using the config.yaml from training output"
+fi
+echo ""
 
 EXPORT_CMD="python tools/deploy/export_model_lazy.py \
     --config-file $CONFIG_FILE \
@@ -38,7 +49,7 @@ if [ ! -z "$MODEL_WEIGHTS" ] && [ -f "$MODEL_WEIGHTS" ]; then
     EXPORT_CMD="$EXPORT_CMD train.init_checkpoint=$MODEL_WEIGHTS"
 else
     echo "Note: No model weights specified. Exporting with random initialization."
-    echo "      To use trained weights, provide path as second argument."
+    echo "      To use trained weights, provide path as third argument."
 fi
 
 # Add device specification
@@ -87,5 +98,16 @@ echo "1. Install dependencies: LibTorch, TorchVision, OpenCV"
 echo "2. Train or download model weights for mask_rcnn_R_50_FPN_100ep_LSJ"
 echo "3. Uncomment the export command in this script and run it"
 echo "4. Follow the build and inference commands above"
+echo ""
+echo "=== Usage Examples ==="
+echo "# Using base config:"
+echo "  ./tools/deploy/example_export_workflow.sh \\"
+echo "    configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py \\"
+echo "    demo/sample.jpg model_weights.pth"
+echo ""
+echo "# Using saved config.yaml from training (recommended):"
+echo "  ./tools/deploy/example_export_workflow.sh \\"
+echo "    /path/to/training_output/config.yaml \\"
+echo "    demo/sample.jpg /path/to/training_output/model_final.pth"
 echo ""
 echo "For detailed instructions, see tools/deploy/README_LAZYCONFIG.md"

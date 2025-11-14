@@ -5,6 +5,14 @@ Export script for models using LazyConfig.
 
 This script supports exporting detectron2 models defined with LazyConfig
 to TorchScript format for deployment with LibTorch.
+
+The script accepts both .py config files and .yaml config files:
+- Use .py files for base configs (e.g., configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py)
+- Use .yaml files for trained model configs (e.g., training_output/config.yaml)
+
+For trained models, it's recommended to use the config.yaml saved in the training
+output directory, as it contains the exact configuration used during training
+(including any command-line overrides).
 """
 import argparse
 import os
@@ -172,7 +180,13 @@ def main() -> None:
         help="Method to export models",
         default="tracing",
     )
-    parser.add_argument("--config-file", default="", metavar="FILE", help="path to config file")
+    parser.add_argument(
+        "--config-file",
+        default="",
+        metavar="FILE",
+        help="path to config file (.py or .yaml). "
+        "For trained models, use the config.yaml saved in the training output directory.",
+    )
     parser.add_argument("--sample-image", default=None, type=str, help="sample image for input")
     parser.add_argument("--run-eval", action="store_true")
     parser.add_argument("--output", help="output directory for the converted model")

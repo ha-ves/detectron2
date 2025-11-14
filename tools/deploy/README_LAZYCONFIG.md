@@ -24,6 +24,7 @@ Use the `export_model_lazy.py` script to export a LazyConfig model:
 
 ```bash
 # Export with tracing (recommended)
+# Using the base config file:
 python tools/deploy/export_model_lazy.py \
     --config-file configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py \
     --output ./output \
@@ -31,6 +32,17 @@ python tools/deploy/export_model_lazy.py \
     --format torchscript \
     --sample-image /path/to/sample_image.jpg \
     train.init_checkpoint=/path/to/model_weights.pth \
+    train.device=cuda
+
+# Or using the saved config.yaml from training output:
+# (Recommended for trained models - this ensures exact config used during training)
+python tools/deploy/export_model_lazy.py \
+    --config-file /path/to/training_output/config.yaml \
+    --output ./output \
+    --export-method tracing \
+    --format torchscript \
+    --sample-image /path/to/sample_image.jpg \
+    train.init_checkpoint=/path/to/training_output/model_final.pth \
     train.device=cuda
 
 # Or export with scripting
@@ -43,6 +55,7 @@ python tools/deploy/export_model_lazy.py \
 ```
 
 **Important Notes:**
+- **For trained models**: Use the `config.yaml` file saved in your training output directory. This ensures you're using the exact configuration from training, including any overrides.
 - For `--export-method tracing`, you must provide a `--sample-image` 
 - You can specify model weights using `train.init_checkpoint=...` in the opts
 - Set the device with `train.device=cuda` or `train.device=cpu`
@@ -116,6 +129,8 @@ If you built without custom ops or your model doesn't need them:
 
 ## Example: Complete Workflow for mask_rcnn_R_50_FPN_100ep_LSJ
 
+### Option 1: Using Base Config File
+
 ```bash
 # 1. Export the model (assuming you have trained weights)
 python tools/deploy/export_model_lazy.py \
@@ -125,6 +140,38 @@ python tools/deploy/export_model_lazy.py \
     --format torchscript \
     --sample-image demo/sample.jpg \
     train.init_checkpoint=./model_weights.pth \
+    train.device=cuda
+
+# 2. Build the C++ inference code with custom ops
+cd tools/deploy
+mkdir -p build && cd build
+cmake -DCMAKE_PREFIX_PATH="$TORCH_INSTALL_PATH;$TORCHVISION_PATH" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -C ../CMakeLists_with_ops.txt ..
+make -j4
+
+# 3. Run inference
+./torchscript_mask_rcnn_lazy \
+    ../../../export_output/model.ts \
+    ../../../demo/sample.jpg \
+    tracing \
+    ./libdetectron2_ops.so
+```
+
+### Option 2: Using Saved config.yaml (Recommended for Trained Models)
+
+If you've trained a model and have the training output directory:
+
+```bash
+# 1. Export using the saved config.yaml from training
+# This ensures exact match with training configuration
+python tools/deploy/export_model_lazy.py \
+    --config-file /path/to/training_output/config.yaml \
+    --output ./export_output \
+    --export-method tracing \
+    --format torchscript \
+    --sample-image demo/sample.jpg \
+    train.init_checkpoint=/path/to/training_output/model_final.pth \
     train.device=cuda
 
 # 2. Build the C++ inference code with custom ops

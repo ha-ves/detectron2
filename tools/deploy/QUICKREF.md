@@ -9,17 +9,27 @@ This is a quick reference for the new LibTorch export functionality for LazyConf
 
 **Usage**:
 ```bash
+# Using base config file:
 python tools/deploy/export_model_lazy.py \
     --config-file configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py \
     --output ./output \
     --export-method tracing \
     --sample-image image.jpg \
     train.init_checkpoint=model.pth
+
+# Using saved config.yaml from training (recommended for trained models):
+python tools/deploy/export_model_lazy.py \
+    --config-file /path/to/training_output/config.yaml \
+    --output ./output \
+    --export-method tracing \
+    --sample-image image.jpg \
+    train.init_checkpoint=/path/to/training_output/model_final.pth
 ```
 
 **Key Features**:
 - Supports `--export-method tracing` and `--export-method scripting`
-- Works with LazyConfig Python files (not YAML)
+- Works with LazyConfig Python files (.py) and YAML files (.yaml)
+- **Recommended**: Use `config.yaml` from training output for trained models
 - Can override config values via command line (e.g., `train.device=cuda`)
 
 ### 2. CMakeLists_with_ops.txt
