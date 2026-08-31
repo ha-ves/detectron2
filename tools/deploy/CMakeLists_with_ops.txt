@@ -1,0 +1,51 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+# CMake configuration for building detectron2 custom ops library and inference example
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
+project(detectron2_deploy)
+
+# Find required packages
+find_package(Torch REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(TorchVision REQUIRED)   # needed by export-method=tracing/scripting
+
+# Custom ops library
+# This builds the detectron2 custom ops as a shared library that can be loaded by LibTorch
+set(D2_OPS_SOURCE_DIR "../../detectron2/layers/csrc")
+
+file(GLOB D2_OPS_SOURCES 
+    "${D2_OPS_SOURCE_DIR}/*.cpp"
+    "${D2_OPS_SOURCE_DIR}/**/*.cpp"
+)
+
+file(GLOB D2_OPS_CUDA_SOURCES 
+    "${D2_OPS_SOURCE_DIR}/**/*.cu"
+)
+
+# Create custom ops library
+add_library(detectron2_ops SHARED 
+    ${D2_OPS_SOURCES}
+    ${D2_OPS_CUDA_SOURCES}
+)
+
+target_include_directories(detectron2_ops PRIVATE ${D2_OPS_SOURCE_DIR})
+target_link_libraries(detectron2_ops "${TORCH_LIBRARIES}")
+set_property(TARGET detectron2_ops PROPERTY CXX_STANDARD 14)
+
+# Enable CUDA if available
+if(TORCH_CUDA_LIBRARIES)
+    target_compile_definitions(detectron2_ops PRIVATE WITH_CUDA)
+    set_property(TARGET detectron2_ops PROPERTY CUDA_STANDARD 14)
+endif()
+
+# Inference executable
+add_executable(torchscript_mask_rcnn torchscript_mask_rcnn.cpp)
+target_link_libraries(
+  torchscript_mask_rcnn
+  detectron2_ops
+  -Wl,--no-as-needed TorchVision::TorchVision -Wl,--as-needed
+  "${TORCH_LIBRARIES}" ${OpenCV_LIBS})
+set_property(TARGET torchscript_mask_rcnn PROPERTY CXX_STANDARD 14)
+
+# Installation
+install(TARGETS detectron2_ops LIBRARY DESTINATION lib)
+install(TARGETS torchscript_mask_rcnn RUNTIME DESTINATION bin)
